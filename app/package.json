@@ -1,0 +1,22 @@
+{
+  "name": "api-gateway-aws",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "description": "",
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.731.1",
+    "@aws-sdk/lib-dynamodb": "^3.731.1",
+    "@types/node": "^22.10.7",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "esbuild": "^0.24.2"
+  }
+}

@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: API Gateway with Lambda Proxy Integration for Customer Management
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    CodeUri: ./app
+    MemorySize: 128
+    Timeout: 10
+
+Resources:
+  CustomerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: CustomerTable
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  DeleteCustomerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DeleteCustomerFunction
+      Handler: src/lambdas/deleteCustomer.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CustomerTable
+      Environment:
+        Variables:
+          CUSTOMER_TABLE_NAME: CustomerTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: 'es2020'
+        Sourcemap: true
+        External:
+          - '@aws-sdk/client-dynamodb'
+          - '@aws-sdk/lib-dynamodb'
+          - 'aws-sdk'
+        EntryPoints:
+          - src/lambdas/deleteCustomer.ts
+
+  GetCustomerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetCustomerFunction
+      Handler: src/lambdas/getCustomer.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Ref CustomerTable
+      Environment:
+        Variables:
+          CUSTOMER_TABLE_NAME: CustomerTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: 'es2020'
+        Sourcemap: true
+        External:
+          - '@aws-sdk/client-dynamodb'
+          - '@aws-sdk/lib-dynamodb'
+          - 'aws-sdk'
+        EntryPoints:
+          - src/lambdas/getCustomer.ts
+
+  SetCustomerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SetCustomerFunction
+      Handler: src/lambdas/setCustomer.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CustomerTable
+      Environment:
+        Variables:
+          CUSTOMER_TABLE_NAME: CustomerTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: 'es2020'
+        Sourcemap: true
+        External:
+          - '@aws-sdk/client-dynamodb'
+          - '@aws-sdk/lib-dynamodb'
+          - 'aws-sdk'
+        EntryPoints:
+          - src/lambdas/setCustomer.ts
+
+  UpdateCustomerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: UpdateCustomerFunction
+      Handler: src/lambdas/updateCustomer.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBWritePolicy:
+            TableName: !Ref CustomerTable
+      Environment:
+        Variables:
+          CUSTOMER_TABLE_NAME: CustomerTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: 'es2020'
+        Sourcemap: true
+        External:
+          - '@aws-sdk/client-dynamodb'
+          - '@aws-sdk/lib-dynamodb'
+          - 'aws-sdk'
+        EntryPoints:
+          - src/lambdas/updateCustomer.ts
+
+  CustomerApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Dev
+      DefinitionBody:
+        openapi: 3.0.1
+        info:
+          title: Customer API
+          version: 1.0.0
+        paths:
+          /customer:
+            post:
+              x-amazon-apigateway-integration:
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SetCustomerFunction.Arn}/invocations
+                httpMethod: POST
+                type: aws_proxy
+          /customer/{id}:
+            get:
+              x-amazon-apigateway-integration:
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetCustomerFunction.Arn}/invocations
+                httpMethod: GET
+                type: aws_proxy
+            put:
+              x-amazon-apigateway-integration:
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateCustomerFunction.Arn}/invocations
+                httpMethod: PUT
+                type: aws_proxy
+            delete:
+              x-amazon-apigateway-integration:
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteCustomerFunction.Arn}/invocations
+                httpMethod: DELETE
+                type: aws_proxy
+
+Outputs:
+  ApiUrl:
+    Description: URL for the Customer API
+    Value: !Sub https://${CustomerApi}.execute-api.${AWS::Region}.amazonaws.com/Dev
